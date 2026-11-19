@@ -15,6 +15,10 @@ window.Circuit = (function () {
     const v = o.o !== 'h', w = v ? RW : RL, h = v ? RL : RW;
     let g = `<rect class="body" x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}"/>`;
     if (o.n) g += v ? tx(x + 14, y + 4, lbl(o.n, o.v)) : tx(x, y - 16, lbl(o.n, o.v), 'middle');
+    if (o.u) { // Spannungspfeil in Stromrichtung (senkrecht: nach unten, waagerecht: nach rechts)
+      g += v ? `<line class="arr" x1="${x - 22}" y1="${y - 12}" x2="${x - 22}" y2="${y + 12}" marker-end="url(#ah)"/>` + tx(x - 28, y + 4, o.u, 'end')
+             : `<line class="arr" x1="${x - 14}" y1="${y + 22}" x2="${x + 14}" y2="${y + 22}" marker-end="url(#ah)"/>` + tx(x, y + 38, o.u, 'middle');
+    }
     return `<g class="${o.s || ''}">${g}</g>`;
   }
   function V(x, y, o = {}) {
@@ -71,18 +75,19 @@ window.Circuit = (function () {
            | 'ul' (offene Klemmen + U_L) | 'ri' (Quellen aus, offene Klemmen + R_i) */
   function net(o) {
     const mode = o.mode || 'norm', T0 = 50, B0 = 190, W = 120, X0 = 44;
-    const cols = o.cols.filter(c => !c.load || mode === 'norm');
-    const hasLoad = cols.some(c => c.load);
+    const plain = mode === 'plain'; // geschlossenes Netzwerk ohne Klemmen
+    const cols = o.cols.filter(c => !c.load || mode === 'norm' || plain);
+    const hasLoad = !plain && cols.some(c => c.load);
     const xs = [];
     cols.forEach((c, i) => xs.push(i ? xs[i - 1] + W + (c.load && !cols[i - 1].load ? 60 : 0) : X0));
     const last = xs[xs.length - 1];
-    const xend = hasLoad ? last : last + 56;
+    const xend = (hasLoad || plain) ? last : last + 56;
     let s = pl([[X0, T0], [xend, T0]]) + pl([[X0, B0], [xend, B0]]);
     let cutX = null;
     cols.forEach((c, i) => {
       const x = xs[i];
-      if (c.load && !cols[i - 1].load) cutX = (xs[i - 1] + x) / 2;
-      if (c.series) s += R((xs[i - 1] + x) / 2, T0, { o: 'h', n: c.series.n, v: c.series.v });
+      if (hasLoad && c.load && !cols[i - 1].load) cutX = (xs[i - 1] + x) / 2;
+      if (c.series) s += R((xs[i - 1] + x) / 2, T0, { o: 'h', n: c.series.n, v: c.series.v, u: c.series.u });
       if (c.br && c.br.length) {
         s += pl([[x, T0], [x, B0]]);
         if (x < xend) s += dot(x, T0) + dot(x, B0);
@@ -90,8 +95,8 @@ window.Circuit = (function () {
         const openI = mode === 'ri' && c.br.some(e => e.t === 'I');
         c.br.forEach((e, k) => {
           const y = T0 + (B0 - T0) * (k + 1) / (n + 1);
-          const st = c.load ? 'load' : (openI && e.t !== 'I' ? 'dim' : '');
-          const p = { o: 'v', n: e.n, v: e.v, d: e.d, s: st };
+          const st = (c.load && !plain) ? 'load' : (openI && e.t !== 'I' ? 'dim' : '');
+          const p = { o: 'v', n: e.n, v: e.v, d: e.d, s: st, u: e.u };
           if (e.t === 'R') s += R(x, y, p);
           else if (e.t === 'V') { if (mode !== 'ri') s += V(x, y, p); }
           else if (e.t === 'I') s += mode === 'ri' ? gap(x, y, { o: 'v' }) : I(x, y, p);
@@ -99,7 +104,9 @@ window.Circuit = (function () {
       }
     });
     let wv;
-    if (hasLoad) {
+    if (plain) {
+      wv = last + 130;
+    } else if (hasLoad) {
       s += `<line class="cut" x1="${cutX}" y1="${T0 - 28}" x2="${cutX}" y2="${B0 + 28}"/>`;
       s += term(cutX, T0) + term(cutX, B0);
       s += tx(cutX, T0 - 34, 'Trennstelle', 'middle', 'mute');
@@ -121,7 +128,7 @@ window.Circuit = (function () {
         wv = xend + 80;
       }
     }
-    return svg(wv, 250, s, o.label);
+    return svg(wv, 250, s + (o.extra || ''), o.label);
   }
 
   /* ---------- Ersatzschaltungen mit Last ---------- */
@@ -188,5 +195,5 @@ window.Circuit = (function () {
     return svg(520, 300, s, 'Netzwerk aus Klausur SS 2016');
   }
 
-  return { net, theven, norton, thevenOpen, nortonOpen, trenn, ss16, figure, svg };
+  return { net, theven, norton, thevenOpen, nortonOpen, trenn, ss16, figure, svg, R, V, I, tx, pl, dot, term };
 })();

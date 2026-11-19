@@ -40,7 +40,7 @@
   // R_i -> R mit tiefgestelltem i; nur in Text, nie innerhalb von Tags
   function fx(h) {
     return String(h).split(/(<[^>]+>)/).map((p, i) => i % 2 ? p :
-      p.replace(/_([A-Za-z0-9äöüÄÖÜ]+)/g, '<sub>$1</sub>').replace(/\^(\d+)/g, '<sup>$1</sup>')).join('');
+      p.replace(/_([A-Za-z0-9äöüÄÖÜ]+)/g, '<sub>$1</sub>').replace(/\^(-?\d+)/g, (m, n) => '<sup>' + n.replace('-', '−') + '</sup>')).join('');
   }
   function rich(h, skill) {
     return fx(h).replace(/\{\{fig:([\w+-]+)\}\}/g, (m, names) =>
@@ -49,19 +49,24 @@
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
   /* ---------- Zahlen prüfen ---------- */
-  const PREF = { '': 1, m: 1e-3, k: 1e3, M: 1e6, 'µ': 1e-6, 'μ': 1e-6, u: 1e-6 };
+  const PREF = { '': 1, m: 1e-3, k: 1e3, M: 1e6, 'µ': 1e-6, 'μ': 1e-6, u: 1e-6, n: 1e-9 };
   function parseUnit(u) {
     u = (u || '').trim().replace(/ohm/i, 'Ω').replace(/^Ω$/, 'Ω');
-    const m = u.match(/^([mkMµμu]?)([AVΩ])$/);
+    const m = u.match(/^([mkMµμun]?)([AVΩCWSJ])$/);
     return m ? { f: PREF[m[1]], base: m[2] } : null;
   }
   function toBase(val, unit) { const p = parseUnit(unit); return p ? { v: val * p.f, base: p.base } : null; }
   function checkNum(input, st) {
-    const m = String(input).trim().match(/^([-+]?\d*[.,]?\d+(?:[eE][-+]?\d+)?)\s*([a-zA-ZΩµμ]*)$/);
+    const m = String(input).trim().match(/^([-+−]?\d*[.,]?\d+(?:[eE][-+]?\d+)?)\s*(.*)$/);
     if (!m) return { ok: false, msg: 'Bitte eine Zahl eingeben, z. B. 12,5' };
-    const num = parseFloat(m[1].replace(',', '.'));
+    const num = parseFloat(m[1].replace(',', '.').replace('−', '-'));
     const want = toBase(st.answer, st.unit);
-    const got = m[2] ? toBase(num, m[2]) : toBase(num, st.unit);
+    let got;
+    if (!want) { // freie Einheit (z. B. A/mm², 1/K, Wh): nur die Zahl wird verglichen
+      return Math.abs(num - st.answer) <= (st.tol || 0.01) * Math.abs(st.answer) + 1e-12
+        ? { ok: true } : { ok: false, msg: `Noch nicht ganz. Achte auf die Einheit ${st.unit}.` };
+    }
+    got = m[2] ? toBase(num, m[2]) : toBase(num, st.unit);
     if (!got) return { ok: false, msg: 'Einheit nicht erkannt. Erlaubt sind z. B. V, mA, kΩ.' };
     if (got.base !== want.base) return { ok: false, msg: `Hier ist eine Größe in ${want.base} gefragt.` };
     const tol = st.tol || 0.01;
