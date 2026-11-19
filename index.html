@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ELEK Skilltree</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<!-- Pfeilspitzen für alle Schaltbilder -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="mk"/></marker>
+    <marker id="ahA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="mkA"/></marker>
+  </defs>
+</svg>
+
+<header class="top">
+  <a href="#/" class="brand">ELEK</a>
+  <span id="crumb"></span>
+</header>
+<main id="app"></main>
+
+<script src="js/circuit.js"></script>
+<script src="js/app.js"></script>
+
+<!-- Skills: pro Skill eine Zeile. Reihenfolge egal. -->
+<script src="skills/_geplant.js"></script>
+<script src="skills/zweipol.js"></script>
+
+<script>App.start();</script>
+</body>
+</html>
