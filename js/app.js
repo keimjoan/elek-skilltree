@@ -24,7 +24,12 @@
     d: {},
     load() { try { this.d = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { this.d = {}; } },
     save() { try { localStorage.setItem(KEY, JSON.stringify(this.d)); } catch (e) { /* ohne Speicher weiter */ } },
-    skill(id) { return this.d[id] || (this.d[id] = { ch: {}, st: {} }); }
+    skill(id) {
+      // Ändert sich der Aufbau eines Skills (skill.version), wird der alte Fortschritt verworfen
+      const o = this.d[id] || (this.d[id] = { ch: {}, st: {} }), sk = window.Skills && Skills.get(id), v = (sk && sk.version) || 1;
+      if ((o.v || 1) !== v) { o.v = v; o.ch = {}; o.st = {}; this.save(); }
+      return o;
+    }
   };
   function chapterDone(skill, ch) {
     const S = Store.skill(skill.id);
@@ -82,9 +87,15 @@
   function stepCard(skill, ch, st, i, state) {
     const key = ch.id + ':' + i;
     const q = `<div class="q"><b class="n">${i + 1}</b>${rich(st.q, skill)}</div>`;
+    const figv = st.fig ? rich(`{{fig:${st.fig}}}`, skill) : '';
+    if (st.type === 'info') { // Erklär-Schritt: Text und Bild, dann „Verstanden“
+      return `<section class="step info ${state ? 'done' : ''}" data-key="${key}">${q}` +
+        (st.text ? `<div class="after">${rich(st.text, skill)}</div>` : '') + figv +
+        (state ? '' : '<button class="btn" data-act="ack">Verstanden – weiter</button>') + '</section>';
+    }
     if (state) {
       const res = st.result ? `<div class="res ${state === 'seen' ? 'seen' : ''}"><span class="tick">✓</span>${rich(st.result, skill)}</div>` : '';
-      return `<section class="step done" data-key="${key}">${q}${res}` +
+      return `<section class="step done" data-key="${key}">${q}${figv}${res}` +
         (st.after ? `<div class="after">${rich(st.after, skill)}</div>` : '') +
         (st.figAfter ? rich(`{{fig:${st.figAfter}}}`, skill) : '') + '</section>';
     }
@@ -96,7 +107,7 @@
     }
     const hints = st.hints || [];
     const pills = hints.map((h, k) => h ? `<button class="pill" data-h="${k}">${LEVELS[k]}</button>` : '').join('');
-    return `<section class="step" data-key="${key}">${q}${input}<div class="fb" role="status"></div>` +
+    return `<section class="step" data-key="${key}">${q}${figv}${input}<div class="fb" role="status"></div>` +
       (pills ? `<div class="help">Hilfe:&nbsp;${pills}</div><div class="hints"></div>` : '') + '</section>';
   }
   function stepsHTML(skill, ch) {
@@ -144,8 +155,13 @@
     const { skill, idx } = cur, ch = skill.chapters[idx];
     $('#steps').innerHTML = stepsHTML(skill, ch);
     $('.side').innerHTML = renderSide(skill, idx);
-    const f = $('#steps .step:not(.done) input');
-    if (f) f.focus({ preventScroll: true });
+    const nxt = $('#steps .step:not(.done)');
+    if (nxt) {
+      const f = $('input', nxt);
+      if (f) f.focus({ preventScroll: true });
+      const top = nxt.getBoundingClientRect().top;
+      if (top > window.innerHeight * 0.6 || top < 0) nxt.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }
   }
   function setState(sec, state) {
     const { skill, idx } = cur, ch = skill.chapters[idx];
@@ -175,6 +191,7 @@
       d.innerHTML = inner; box.appendChild(d); pill.classList.add('open');
       return;
     }
+    if (e.target.closest('[data-act="ack"]')) return setState(sec, 'ok');
     if (e.target.closest('[data-act="seen"]')) return setState(sec, 'seen');
     if (e.target.closest('[data-act="check"]')) return runCheck(sec, st);
     const opt = e.target.closest('.opt');

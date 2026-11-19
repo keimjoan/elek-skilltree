@@ -26,8 +26,13 @@ Skills.add({
 
 Schritt-Typen:
 
-- Zahl: `{ q, unit: 'mA', answer: 200, result, after?, figAfter?, hints: [4 Texte] }`
-- Auswahl: `{ type: 'choice', q, options: [{ t, ok: true }, { t, why }], result, hints }`
+- Zahl: `{ q, unit: 'mA', answer: 200, result, after?, fig?, figAfter?, hints: [4 Texte] }`
+- Auswahl: `{ type: 'choice', q, options: [{ t, ok: true }, { t, why }], result, after?, fig?, hints }`
+- Erklär-Schritt ohne Eingabe: `{ type: 'info', q: 'Titel', text: '<p>…</p>', fig?: 'name' }` (Button „Verstanden – weiter“)
+
+Zusatzfelder: `fig` zeigt ein Bild schon mit der Frage, `figAfter` erst nach dem Lösen (und in der Hilfe „Ich check gar nichts“). `after` ist die Begründung, die nach dem Lösen steht. Einheiten dürfen frei sein (`A/mm²`, `Wh`), dann wird nur die Zahl verglichen.
+
+Ändert sich der Aufbau eines Skills so, dass alte Schritt-Nummern nicht mehr passen, `version: 2` (usw.) im `Skills.add` hochzählen. Dann wird der gespeicherte Fortschritt dieses Skills einmalig zurückgesetzt, der anderer Skills bleibt.
 
 Die vier Hilfestufen sind: Kleiner Stups, Welche Regel?, Ansatz, Ich check gar nichts. Die letzte zeigt die Lösung samt neu gezeichnetem Schaltbild (`figAfter`).
 

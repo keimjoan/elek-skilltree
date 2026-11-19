@@ -1,6 +1,7 @@
 /* Schaltbilder als SVG – Symbolik wie in der Vorlesung:
-   Spannungsquelle = Kreis mit Strich quer zur Leitung + Zählpfeil (von + nach −)
-   Stromquelle     = Kreis mit Strich längs zur Leitung + Pfeil
+   Spannungsquelle = Kreis mit Strich ENTLANG der Leitung + Zählpfeil (von + nach −); ohne Kreis bleibt ein Draht
+   Stromquelle     = Kreis mit Strich QUER zur Leitung + Pfeil; ohne Kreis bleibt eine Lücke
+   (so in TUT 03 Folie 9 und in der Klausur SS 2016)
    Texte: "R_i" wird automatisch zu R mit tiefgestelltem i. */
 window.Circuit = (function () {
   const RW = 16, RL = 38, RAD = 14;
@@ -17,7 +18,7 @@ window.Circuit = (function () {
     if (o.n) g += v ? tx(x + 14, y + 4, lbl(o.n, o.v)) : tx(x, y - 16, lbl(o.n, o.v), 'middle');
     if (o.u) { // Spannungspfeil in Stromrichtung (senkrecht: nach unten, waagerecht: nach rechts)
       g += v ? `<line class="arr" x1="${x - 22}" y1="${y - 12}" x2="${x - 22}" y2="${y + 12}" marker-end="url(#ah)"/>` + tx(x - 28, y + 4, o.u, 'end')
-             : `<line class="arr" x1="${x - 14}" y1="${y + 22}" x2="${x + 14}" y2="${y + 22}" marker-end="url(#ah)"/>` + tx(x, y + 38, o.u, 'middle');
+             : `<line class="arr" x1="${o.ur ? x + 14 : x - 14}" y1="${y + 22}" x2="${o.ur ? x - 14 : x + 14}" y2="${y + 22}" marker-end="url(#ah)"/>` + tx(x, y + 38, o.u, 'middle');
     }
     return `<g class="${o.s || ''}">${g}</g>`;
   }
@@ -26,12 +27,12 @@ window.Circuit = (function () {
     let g = `<circle class="body" cx="${x}" cy="${y}" r="${RAD}"/>`;
     if (v) {
       const d = o.d === 'up' ? -1 : 1;
-      g += `<line class="sym" x1="${x - RAD}" y1="${y}" x2="${x + RAD}" y2="${y}"/>`;
+      g += `<line class="sym" x1="${x}" y1="${y - RAD}" x2="${x}" y2="${y + RAD}"/>`;
       g += `<line class="arr" x1="${x + 22}" y1="${y - 11 * d}" x2="${x + 22}" y2="${y + 11 * d}" marker-end="url(#ah)"/>`;
       if (o.n) g += tx(x + 30, y + 4, lbl(o.n, o.v));
     } else {
       const d = o.d === 'left' ? -1 : 1;
-      g += `<line class="sym" x1="${x}" y1="${y - RAD}" x2="${x}" y2="${y + RAD}"/>`;
+      g += `<line class="sym" x1="${x - RAD}" y1="${y}" x2="${x + RAD}" y2="${y}"/>`;
       g += `<line class="arr" x1="${x - 11 * d}" y1="${y + 24}" x2="${x + 11 * d}" y2="${y + 24}" marker-end="url(#ah)"/>`;
       if (o.n) g += tx(x, y + 42, lbl(o.n, o.v), 'middle');
     }
@@ -41,13 +42,15 @@ window.Circuit = (function () {
     const v = o.o !== 'h';
     let g = `<circle class="body" cx="${x}" cy="${y}" r="${RAD}"/>`;
     if (v) {
-      const up = o.d !== 'down';
-      g += `<line class="arr" x1="${x}" y1="${up ? y + 9 : y - 9}" x2="${x}" y2="${up ? y - 9 : y + 9}" marker-end="url(#ah)"/>`;
-      if (o.n) g += tx(x + 22, y + 4, lbl(o.n, o.v));
+      const d = o.d === 'down' ? 1 : -1;
+      g += `<line class="sym" x1="${x - RAD}" y1="${y}" x2="${x + RAD}" y2="${y}"/>`;
+      g += `<line class="arr" x1="${x + 22}" y1="${y - 11 * d}" x2="${x + 22}" y2="${y + 11 * d}" marker-end="url(#ah)"/>`;
+      if (o.n) g += tx(x + 30, y + 4, lbl(o.n, o.v));
     } else {
-      const r = o.d !== 'left';
-      g += `<line class="arr" x1="${r ? x - 9 : x + 9}" y1="${y}" x2="${r ? x + 9 : x - 9}" y2="${y}" marker-end="url(#ah)"/>`;
-      if (o.n) g += tx(x, y + 34, lbl(o.n, o.v), 'middle');
+      const d = o.d === 'left' ? -1 : 1;
+      g += `<line class="sym" x1="${x}" y1="${y - RAD}" x2="${x}" y2="${y + RAD}"/>`;
+      g += `<line class="arr" x1="${x - 11 * d}" y1="${y + 24}" x2="${x + 11 * d}" y2="${y + 24}" marker-end="url(#ah)"/>`;
+      if (o.n) g += tx(x, y + 42, lbl(o.n, o.v), 'middle');
     }
     return `<g class="${o.s || ''}">${g}</g>`;
   }
@@ -98,7 +101,7 @@ window.Circuit = (function () {
           const st = (c.load && !plain) ? 'load' : (openI && e.t !== 'I' ? 'dim' : '');
           const p = { o: 'v', n: e.n, v: e.v, d: e.d, s: st, u: e.u };
           if (e.t === 'R') s += R(x, y, p);
-          else if (e.t === 'V') { if (mode !== 'ri') s += V(x, y, p); }
+          else if (e.t === 'V') { if (mode !== 'ri') s += V(x, y, p); else s += tx(x + 12, y + 4, 'Draht', 'start', 'mute'); }
           else if (e.t === 'I') s += mode === 'ri' ? gap(x, y, { o: 'v' }) : I(x, y, p);
         });
       }
@@ -132,14 +135,21 @@ window.Circuit = (function () {
   }
 
   /* ---------- Ersatzschaltungen mit Last ---------- */
+  // Strom I_Last fließt oben von A durch die Last nach B (Pfeile auf den Leitungen neben der Last)
+  const loadCur = o => o.noCur ? '' :
+    `<line class="arrA" x1="272" y1="50" x2="318" y2="50" marker-end="url(#ahA)"/>` + tx(295, 40, o.il || 'I_Last', 'middle', 'accT') +
+    `<line class="arrA" x1="318" y1="190" x2="272" y2="190" marker-end="url(#ahA)"/>`;
   const theven = o => net({ cols: [
     { br: [{ t: 'V', n: 'U_L', v: o.UL, d: 'down' }] },
     { series: { n: 'R_i', v: o.Ri }, br: [] },
-    { load: true, br: [{ t: 'R', n: o.ln || 'R_Last', v: o.RL }] }], label: 'Spannungsquellenersatzschaltung' });
+    { load: true, br: [{ t: 'R', n: o.ln || 'R_Last', v: o.RL, u: o.noCur ? undefined : (o.un || 'U_Last') }] }],
+    extra: loadCur(o), label: 'Spannungsquellenersatzschaltung' });
   const norton = o => net({ cols: [
     { br: [{ t: 'I', n: 'I_K', v: o.IK, d: 'up' }] },
     { br: [{ t: 'R', n: 'R_i', v: o.Ri }] },
-    { load: true, br: [{ t: 'R', n: o.ln || 'R_Last', v: o.RL }] }], label: 'Stromquellenersatzschaltung' });
+    { load: true, br: [{ t: 'R', n: o.ln || 'R_Last', v: o.RL, u: o.noCur ? undefined : (o.un || 'U_Last') }] }],
+    extra: loadCur(o) + (o.noCur ? '' : `<line class="arrA" x1="164" y1="62" x2="164" y2="92" marker-end="url(#ahA)"/>` + tx(172, 82, o.ii || 'I_i', 'start', 'accT')),
+    label: 'Stromquellenersatzschaltung' });
   const thevenOpen = () => net({ mode: 'term', cols: [
     { br: [{ t: 'V', n: 'U_L', d: 'down' }] }, { series: { n: 'R_i' }, br: [] }] });
   const nortonOpen = () => net({ mode: 'term', cols: [
@@ -159,11 +169,13 @@ window.Circuit = (function () {
   }
 
   /* ---------- Klausur SS 2016, Aufgabe 1 (TUT 3, Aufgabe 2) ----------
-     modes: 'norm' (R_3 als Last) | 'ul' | 'ri' */
+     modes: 'norm' (R_3 als Last) | 'open' (aktiver Zweipol, Klemmen offen) | 'ri0' (Quellen aus, ohne Hervorhebung)
+            | 'ri' (Quellen aus, Sackgassen abgeblendet) | 'ul' (Klemmen offen, Ströme und Spannungen) */
   function ss16(mode) {
     mode = mode || 'norm';
-    const ri = mode === 'ri', ul = mode === 'ul', open = ri || ul;
-    const wc = ri ? 'wire hl' : 'wire', dead = ri ? 'dim' : '';
+    const off = mode === 'ri' || mode === 'ri0', hl = mode === 'ri', ul = mode === 'ul', open = mode !== 'norm';
+    const wc = hl ? 'wire hl' : 'wire', dead = hl ? 'dim' : '';
+    const cur = (x1, y1, x2, y2) => `<line class="arrA" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" marker-end="url(#ahA)"/>`;
     let s = '';
     // linker Teil: R1, I_C1, R2, U_q2
     s += `<g class="${dead}">`;
@@ -171,26 +183,34 @@ window.Circuit = (function () {
     s += R(60, 140, { o: 'v', n: 'R_1' });
     s += R(200, 85, { o: 'v', n: 'R_2' });
     s += '</g>';
-    if (ri) { s += gap(130, 40, { o: 'h' }); }
+    if (off) s += gap(130, 40, { o: 'h' });
     else s += I(130, 40, { o: 'h', d: 'right', n: 'I_C1' });
-    if (!ri) s += V(130, 240, { o: 'h', d: 'right', n: 'U_q2' });
+    if (!off) s += V(130, 240, { o: 'h', d: 'right', n: 'U_q2' });
+    else s += tx(130, 262, 'Draht', 'middle', 'mute');
     // mittlerer/rechter Teil
     s += pl([[200, 130], [340, 130], [420, 130], [420, 240], [340, 240], [200, 240]], wc);
     s += pl([[340, 130], [340, 240]], wc);
-    s += R(270, 130, { o: 'h', n: 'R_4', s: ri ? 'hl' : '' });
-    s += R(270, 240, { o: 'h', n: 'R_5', s: ri ? 'hl' : '' });
-    s += R(420, 185, { o: 'v', n: 'R_6', s: ri ? 'dim' : '' });
-    if (!ri) s += V(340, 185, { o: 'v', d: 'down', n: 'U_q3' });
+    s += R(270, 130, { o: 'h', n: 'R_4', s: hl ? 'hl' : '', u: ul ? 'U_4' : undefined });
+    s += R(270, 240, { o: 'h', n: 'R_5', s: hl ? 'hl' : '', u: ul ? 'U_5' : undefined, ur: true });
+    s += R(420, 185, { o: 'v', n: 'R_6', s: hl ? 'dim' : '' });
+    if (!off) s += V(340, 185, { o: 'v', d: 'down', n: 'U_q3' });
+    else s += tx(350, 189, 'Draht', 'start', 'mute');
     s += dot(200, 130) + dot(340, 130) + dot(340, 240) + dot(200, 240);
     // Trennstelle bei R_3
     if (!open) {
       s += pl([[200, 130], [200, 240]]) + R(200, 185, { o: 'v', n: 'R_3', s: 'load' });
-      s += `<line class="arr" x1="184" y1="160" x2="184" y2="210" marker-end="url(#ahA)" style="stroke:var(--acc)"/>` + tx(176, 188, 'I_3', 'end', 'accT');
+      s += cur(184, 160, 184, 210) + tx(176, 188, 'I_3', 'end', 'accT');
+      s += term(200, 130) + term(200, 240) + tx(212, 126, 'A', 'start', 'accT') + tx(212, 252, 'B', 'start', 'accT');
     } else {
       s += pl([[200, 130], [200, 155]]) + pl([[200, 240], [200, 215]]) + term(200, 155) + term(200, 215);
       s += tx(188, 159, 'A', 'end', 'accT') + tx(188, 223, 'B', 'end', 'accT');
-      if (ul) s += `<line class="arrA" x1="226" y1="157" x2="226" y2="213" marker-end="url(#ahA)"/>` + tx(234, 189, 'U_L', 'start', 'accT');
-      if (ri) s += `<line class="arrA" x1="226" y1="157" x2="226" y2="213" marker-start="url(#ahA)" marker-end="url(#ahA)"/>` + tx(234, 189, 'R_i', 'start', 'accT');
+      if (ul) {
+        s += `<line class="arrA" x1="226" y1="157" x2="226" y2="213" marker-end="url(#ahA)"/>` + tx(234, 189, 'U_L', 'start', 'accT');
+        // Strom der Stromquelle: einziger Rückweg über R_2, R_4, R_5, U_q2, R_1
+        s += cur(152, 40, 190, 40) + cur(296, 130, 328, 130) + cur(328, 240, 296, 240) + cur(190, 240, 158, 240) + cur(60, 215, 60, 175);
+        s += tx(312, 121, '100 mA', 'middle', 'accT');
+      }
+      if (hl || mode === 'ri0') s += `<line class="arrA" x1="226" y1="157" x2="226" y2="213" marker-start="url(#ahA)" marker-end="url(#ahA)"/>` + tx(234, 189, 'R_i', 'start', 'accT');
     }
     return svg(520, 300, s, 'Netzwerk aus Klausur SS 2016');
   }
